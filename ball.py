@@ -1,7 +1,7 @@
 
 from point import *
 
-class Unit(Point):
+class Ball(Point):
     def __init__(self, x, y, rad, speed, red, green, blue, radius):
         Point.__init__(self, x, y)
         self.rad = rad
@@ -10,3 +10,4 @@ class Unit(Point):
         self.green = green
         self.blue = blue
         self.radius = radius
+        self.enable = True
