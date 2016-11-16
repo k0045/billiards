@@ -8,6 +8,9 @@ from hole import *
 from ball import *
 
 
+
+eps = 1e-4
+
 hole_coner = { Hole(-218,  218, 12), 
                Hole(   0, -218, 12),
                Hole(   0,  218, 12),
@@ -16,9 +19,12 @@ hole_edge  = { Hole(   0,    0, 13),
                Hole(-220,    0, 13) }
 
 balls = {
-    Ball(-110, -180, 0.24 / 2.0, 10, 1, 1, 1, 10)
+    Ball(-110, -180, math.pi / 2.0, 10, 1, 1, 1, 10),
+    Ball(-110, 80, 0, 0, 251/ 256.0, 236 / 256.0, 49 / 256.0, 10)
 }
 
+def euclid_distance(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1)**2 +  (y2 - y1)**2)
 
 # draw a circle whose centre is (x, y) and radius is r
 def draw_circle(x, y, r):
@@ -38,9 +44,22 @@ def calc():
         u.x += vx
         u.y += vy
 
-        u.speed = 0.995 * u.speed
+        u.speed = 0.98 * u.speed
 
-        # if the ball drops, the ball is no longer enable
+        # bump between two balls
+        for b in [b for b in balls if b.enable and u.id != b.id]:
+            if euclid_distance(u.x, u.y, b.x, b.y) < u.radius + b.radius:
+                # if theta is 0
+                if math.fabs(u.x - b.x) < eps or math.fabs(u.y - b.y) < eps:
+                    b.speed = u.speed
+                    b.rad = u.rad
+                    u.speed = 0
+                # Or
+                #else:
+
+
+
+        # if the balls drop, the balls are no longer enable.
         for h in hole_coner:
             if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.6:
                 u.enable = False
@@ -48,8 +67,8 @@ def calc():
             if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.6:
                 u.enable = False
 
-        # if the coordinate exceeds the constraints,
-        # recalculate the coordinate
+        # if the points exceeds the constraints,
+        # recalculate the points.
         if (u.y + u.radius > 220):
             u.rad = 2 * math.pi - u.rad
             diff = u.y + u.radius - 220
@@ -72,7 +91,7 @@ def draw():
     glClearColor(1.0, 1.0, 1.0, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    # draw the billiards' table
+    # draw the table
     glColor3f(0.675, 0.285, 0.117)
     glRectf(-235/240.0, 235/240.0, 15/240.0, -235/24.0)
     glColor3f(0.0, 0.0, 0.0)
@@ -85,9 +104,9 @@ def draw():
         draw_circle(h.x / 240.0, h.y / 240.0, h.radius / 240.0)
 
     # draw balls
-    # note that balls' point is given in absolute coordinate where
-    # origin is (0, 0), so North-West corner is (-240, 240), 
-    # South-East corner is (240, -240)
+    # Note that balls' points are given in the way of absolute coordinate where
+    # the origin is (0, 0) which is the centre of the window, so the North-West corner is (-240, 240) and
+    # the South-East corner is (240, -240).
 
     for u in [b for b in balls if b.enable]:
         glColor3f(u.red, u.green, u.blue)
@@ -104,6 +123,7 @@ def timer(value):
 
 def fixsize(width, height):
     glutReshapeWindow(480, 480)
+
 
 glutInit(sys.argv)
 glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
