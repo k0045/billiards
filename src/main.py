@@ -19,8 +19,11 @@ hole_edge  = { Hole(   0,    0, 13),
                Hole(-220,    0, 13) }
 
 balls = {
-    Ball(-110, -180, math.pi / 2.0, 10, 1, 1, 1, 10),
-    Ball(-110, 80, 0, 0, 251/ 256.0, 236 / 256.0, 49 / 256.0, 10)
+    Ball(-110, -180, math.pi / 2.0 + 0.3, 13, 1, 1, 1, 10),
+    Ball(-110,  80, 0, 0, 251/ 256.0, 236 / 256.0,  49 / 256.0, 10),
+    Ball(-130, 130, 0, 0,   0/ 256.0,   0 / 256.0, 256 / 256.0, 10),
+    Ball(-130,  50, 0, 0, 256/ 256.0,   0 / 256.0,   0 / 256.0, 10),
+    Ball(-120, -70, 0, 0,   0/ 256.0,   0 / 256.0,   0 / 256.0, 10)
 }
 
 def euclid_distance(x1, y1, x2, y2):
@@ -39,32 +42,54 @@ def draw_circle(x, y, r):
 
 def calc():
     for u in [b for b in balls if b.enable]:
+        if u.speed < 0.3:
+            u.speed = 0
+            continue
         vx = u.speed * math.cos(u.rad)
         vy = u.speed * math.sin(u.rad)
+
         u.x += vx
         u.y += vy
 
         u.speed = 0.98 * u.speed
 
         # bump between two balls
+        e = 0.7 #restitution
         for b in [b for b in balls if b.enable and u.id != b.id]:
             if euclid_distance(u.x, u.y, b.x, b.y) < u.radius + b.radius:
-                # if theta is 0
-                if math.fabs(u.x - b.x) < eps or math.fabs(u.y - b.y) < eps:
-                    b.speed = u.speed
-                    b.rad = u.rad
-                    u.speed = 0
-                # Or
-                #else:
+                vx2 = b.speed * math.cos(b.rad)
+                vy2 = b.speed * math.sin(b.rad)
+                nvx = ((1 - e) * vx + (1 + e) * vx2) * 0.5
+                nvy = ((1 - e) * vy + (1 + e) * vy2) * 0.5
+                nvx2 = ((1 + e) * vx + (1 - e) * vx2) * 0.5
+                nvy2 = ((1 + e) * vy + (1 - e) * vy2) * 0.5
 
+                u.speed = math.sqrt(nvx**2 + nvy**2)
+                b.speed = math.sqrt(nvx2**2 + nvy2**2)
+
+                if nvx2 == 0:
+                    b.rad = 0
+                else:
+                    b.rad = math.atan2(nvy2,  nvx2)
+
+                if nvx == 0:
+                    u.rad = 0
+                else:
+                    u.rad = math.atan2(nvy, nvx)
+               
+                b.x += nvx
+                b.y += nvy
+
+
+            
 
 
         # if the balls drop, the balls are no longer enable.
         for h in hole_coner:
-            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.6:
+            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.9:
                 u.enable = False
         for h in hole_edge:    
-            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.6:
+            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.9:
                 u.enable = False
 
         # if the points exceeds the constraints,
