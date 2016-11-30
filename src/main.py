@@ -3,6 +3,7 @@ import math
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 
+
 from point import *
 from hole import *
 from ball import *
@@ -11,19 +12,27 @@ from ball import *
 
 eps = 1e-4
 
-hole_coner = { Hole(-218,  218, 12), 
-               Hole(   0, -218, 12),
-               Hole(   0,  218, 12),
-               Hole(-218, -218, 12) }
+# To change simulator's behavior, change variables below.
+class Parameter:
+    e = 1 #restitution
+    deceleration = 1
+    
+
+hole_corner = { Hole(-218,  218, 12), 
+                Hole(   0, -218, 12),
+                Hole(   0,  218, 12),
+                Hole(-218, -218, 12) }
 hole_edge  = { Hole(   0,    0, 13),
                Hole(-220,    0, 13) }
 
 balls = {
-    Ball(-110, -180, math.pi / 2.0 + 0.3, 13, 1, 1, 1, 10),
+    Ball(-110, -180, math.pi / 2.0, 13, 1, 1, 1, 10),
+
     Ball(-110,  80, 0, 0, 251/ 256.0, 236 / 256.0,  49 / 256.0, 10),
-    Ball(-130, 130, 0, 0,   0/ 256.0,   0 / 256.0, 256 / 256.0, 10),
-    Ball(-130,  50, 0, 0, 256/ 256.0,   0 / 256.0,   0 / 256.0, 10),
-    Ball(-120, -70, 0, 0,   0/ 256.0,   0 / 256.0,   0 / 256.0, 10)
+    #Ball(-123,  100, 0, 0, 256/ 256.0,   0 / 256.0,   0 / 256.0, 10),
+    #Ball( -97,  100, 0, 0,   0/ 256.0,   0 / 256.0, 256 / 256.0, 10),
+    #Ball(-110,  120, 0, 0, 251/ 256.0, 236 / 256.0, 160 / 256.0, 10),
+
 }
 
 def euclid_distance(x1, y1, x2, y2):
@@ -51,18 +60,17 @@ def calc():
         u.x += vx
         u.y += vy
 
-        u.speed = 0.98 * u.speed
+        u.speed = Parameter.deceleration * u.speed
 
         # bump between two balls
-        e = 0.7 #restitution
         for b in [b for b in balls if b.enable and u.id != b.id]:
             if euclid_distance(u.x, u.y, b.x, b.y) < u.radius + b.radius:
                 vx2 = b.speed * math.cos(b.rad)
                 vy2 = b.speed * math.sin(b.rad)
-                nvx = ((1 - e) * vx + (1 + e) * vx2) * 0.5
-                nvy = ((1 - e) * vy + (1 + e) * vy2) * 0.5
-                nvx2 = ((1 + e) * vx + (1 - e) * vx2) * 0.5
-                nvy2 = ((1 + e) * vy + (1 - e) * vy2) * 0.5
+                nvx  = ((1 - Parameter.e) * vx + (1 + Parameter.e) * vx2) * 0.5
+                nvy  = ((1 - Parameter.e) * vy + (1 + Parameter.e) * vy2) * 0.5
+                nvx2 = ((1 + Parameter.e) * vx + (1 - Parameter.e) * vx2) * 0.5
+                nvy2 = ((1 + Parameter.e) * vy + (1 - Parameter.e) * vy2) * 0.5
 
                 u.speed = math.sqrt(nvx**2 + nvy**2)
                 b.speed = math.sqrt(nvx2**2 + nvy2**2)
@@ -71,12 +79,18 @@ def calc():
                     b.rad = 0
                 else:
                     b.rad = math.atan2(nvy2,  nvx2)
-
+                
+                if math.fabs(b.x - u.x) > eps:
+                    if b.x < u.x:
+                        b.rad += math.atan2(b.y - u.y, b.x - u.x) * 0.01
+                    else:
+                        b.rad += math.atan2(u.y - b.y, u.x - b.x) * 0.01
+                        
                 if nvx == 0:
                     u.rad = 0
                 else:
                     u.rad = math.atan2(nvy, nvx)
-               
+
                 b.x += nvx
                 b.y += nvy
 
@@ -85,7 +99,7 @@ def calc():
 
 
         # if the balls drop, the balls are no longer enable.
-        for h in hole_coner:
+        for h in hole_corner:
             if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.9:
                 u.enable = False
         for h in hole_edge:    
@@ -125,7 +139,7 @@ def draw():
     glColor3f(0.0, 0.332, 0.179)
     glRectf(-220/240.0, 220/240.0, 0.0, -220/240.0)
     glColor3f(0.0, 0.0, 0.0)
-    for h in hole_coner:
+    for h in hole_corner:
         draw_circle(h.x / 240.0, h.y / 240.0, h.radius / 240.0)
 
     # draw balls
