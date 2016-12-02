@@ -3,19 +3,21 @@ import math
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 
-
 from point import *
 from hole import *
 from ball import *
 
+import ga
 
 
 eps = 1e-4
 
+GA = ga.GA()
+
 # To change simulator's behavior, change variables below.
 class Parameter:
     e = 1 #restitution
-    deceleration = 1
+    deceleration = 0.98
     
 
 hole_corner = { Hole(-218,  218, 12), 
@@ -25,18 +27,13 @@ hole_corner = { Hole(-218,  218, 12),
 hole_edge  = { Hole(   0,    0, 13),
                Hole(-220,    0, 13) }
 
-balls = {
-    Ball(-110, -180, math.pi / 2.0, 13, 1, 1, 1, 10),
+balls = []
 
-    Ball(-110,  80, 0, 0, 251/ 256.0, 236 / 256.0,  49 / 256.0, 10),
-    #Ball(-123,  100, 0, 0, 256/ 256.0,   0 / 256.0,   0 / 256.0, 10),
-    #Ball( -97,  100, 0, 0,   0/ 256.0,   0 / 256.0, 256 / 256.0, 10),
-    #Ball(-110,  120, 0, 0, 251/ 256.0, 236 / 256.0, 160 / 256.0, 10),
-
-}
+reward = 0
 
 def euclid_distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 +  (y2 - y1)**2)
+
 
 # draw a circle whose centre is (x, y) and radius is r
 def draw_circle(x, y, r):
@@ -50,10 +47,17 @@ def draw_circle(x, y, r):
 
 
 def calc():
+    global balls
+    global reward
+
+    reward -= 1 # the earlier the target balls drop, the heigher the reward should be.
+
+    stopped = True
     for u in [b for b in balls if b.enable]:
-        if u.speed < 0.3:
+        if u.speed < 0.7:
             u.speed = 0
             continue
+        stopped = False
         vx = u.speed * math.cos(u.rad)
         vy = u.speed * math.sin(u.rad)
 
@@ -62,9 +66,26 @@ def calc():
 
         u.speed = Parameter.deceleration * u.speed
 
+        # if the balls drop, the balls are no longer enable.
+        for h in hole_corner:
+            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.9:
+                u.enable = False
+        for h in hole_edge:    
+            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.7:
+                u.enable = False
+
+        # if the white ball drops
+        if u.enable == False:
+            if u.id == 0:
+                reward -= 10000
+            else:
+                reward += 10000
+            continue           
+                
         # bump between two balls
         for b in [b for b in balls if b.enable and u.id != b.id]:
             if euclid_distance(u.x, u.y, b.x, b.y) < u.radius + b.radius:
+                reward += 150
                 vx2 = b.speed * math.cos(b.rad)
                 vy2 = b.speed * math.sin(b.rad)
                 nvx  = ((1 - Parameter.e) * vx + (1 + Parameter.e) * vx2) * 0.5
@@ -82,29 +103,14 @@ def calc():
                 
                 if math.fabs(b.x - u.x) > eps:
                     if b.x < u.x:
-                        b.rad += math.atan2(b.y - u.y, b.x - u.x) * 0.01
+                        b.rad += math.atan2(b.y - u.y, b.x - u.x) * 0.1
                     else:
-                        b.rad += math.atan2(u.y - b.y, u.x - b.x) * 0.01
+                        b.rad += math.atan2(u.y - b.y, u.x - b.x) * 0.1
                         
                 if nvx == 0:
                     u.rad = 0
                 else:
                     u.rad = math.atan2(nvy, nvx)
-
-                b.x += nvx
-                b.y += nvy
-
-
-            
-
-
-        # if the balls drop, the balls are no longer enable.
-        for h in hole_corner:
-            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.9:
-                u.enable = False
-        for h in hole_edge:    
-            if math.fabs(u.x - h.x) + math.fabs(u.y - h.y) < (u.radius + h.radius) * 0.9:
-                u.enable = False
 
         # if the points exceeds the constraints,
         # recalculate the points.
@@ -124,6 +130,35 @@ def calc():
             u.rad = math.pi - u.rad  
             diff = -(u.x - u.radius) - 220
             u.x += diff
+    
+    if stopped:
+        GA.set_score(reward)
+        print("reward %d" % reward)
+        init()
+
+        # test next genes 
+        nextGene = GA.next()
+        balls[0].rad = nextGene.degree / 180.0 * math.pi
+        balls[0].speed = nextGene.speed
+        GA.genesIter += 1
+
+
+
+def init():
+    global balls
+    global reward
+
+    Ball.id_reset()
+
+    balls = [  
+        Ball(-110, -180, 0, 0, 1, 1, 1, 10),
+
+        Ball(-110,  80, 0, 0, 251/ 256.0, 236 / 256.0,  49 / 256.0, 10),
+        #Ball(-123,  100, 0, 0, 256/ 256.0,   0 / 256.0,   0 / 256.0, 10),
+        #Ball( -97,  100, 0, 0,   0/ 256.0,   0 / 256.0, 256 / 256.0, 10),
+        #Ball(-110,  120, 0, 0, 251/ 256.0, 236 / 256.0, 160 / 256.0, 10),
+    ]
+    reward = 0
 
 
 def draw():                
@@ -163,7 +198,8 @@ def timer(value):
 def fixsize(width, height):
     glutReshapeWindow(480, 480)
 
-
+GA.generate_next()
+init()
 glutInit(sys.argv)
 glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
 glutInitWindowSize(480, 480)

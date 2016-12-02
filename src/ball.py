@@ -14,3 +14,7 @@ class Ball(Point):
         self.enable = True
         self.id = Ball.id
         Ball.id += 1
+    
+    @staticmethod
+    def id_reset():
+        Ball.id = 0
