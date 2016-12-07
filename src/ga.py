@@ -6,12 +6,12 @@ import random
 class Gene():
     def __init__(self):
         self.degree = 0 # 9bit
-        self.speed  = 0 # 4bit
+        self.speed  = 0 # 5bit
         self.score  = 0 
 
     def random_gene(self):
         self.degree = random.randint(0, 0b111111111)
-        self.speed  = random.randint(0, 0b1111)
+        self.speed  = random.randint(0, 0b11111)
         return self
 
     @staticmethod
@@ -21,7 +21,7 @@ class Gene():
         r = random.randint(0, 0b111111111)
         g.degree = (g1.degree & r) | (g2.degree & ~r)
 
-        r = random.randint(0, 0b1111)
+        r = random.randint(0, 0b11111)
         g.speed = (g1.speed & r) | (g2.speed & ~r)
 
         return g
@@ -32,14 +32,14 @@ class Gene():
         r = random.randint(0, 0b111111111)
         g.degree = (self.degree & r) | (0b111111111 & ~r)
 
-        r = random.randint(0, 0b1111)
-        g.speed = (self.speed & r) | (0b1111 & ~r)
+        r = random.randint(0, 0b11111)
+        g.speed = (self.speed & r) | (0b11111 & ~r)
 
         return g
 
 
 class GA():
-    GENES_NUM = 6
+    GENES_NUM = 8
     def __init__(self):
         self.generation = 0 # generation number
         self.genes = [Gene()] * GA.GENES_NUM
