@@ -93,6 +93,9 @@ def calc():
                 nvx2 = ((1 + Parameter.e) * vx + (1 - Parameter.e) * vx2) * 0.5
                 nvy2 = ((1 + Parameter.e) * vy + (1 - Parameter.e) * vy2) * 0.5
 
+                u.x -= vx
+                u.y -= vy
+
                 u.speed = math.sqrt(nvx**2 + nvy**2)
                 b.speed = math.sqrt(nvx2**2 + nvy2**2)
 
